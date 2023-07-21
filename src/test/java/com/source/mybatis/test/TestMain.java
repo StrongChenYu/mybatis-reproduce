@@ -1,22 +1,23 @@
 package com.source.mybatis.test;
 
-import com.source.mybatis.binding.MapperProxyFactory;
+import com.source.mybatis.binding.binding.MapperRegistry;
+import com.source.mybatis.binding.session.SqlSession;
+import com.source.mybatis.binding.session.SqlSessionFactory;
+import com.source.mybatis.binding.session.defaults.DefaultSqlSessionFactory;
 import com.source.mybatis.test.dao.IUserDao;
 import org.junit.Test;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class TestMain {
 
     @Test
     public void test() {
-        MapperProxyFactory<IUserDao> factory = new MapperProxyFactory<>(IUserDao.class);
+        MapperRegistry mapperRegistry = new MapperRegistry();
+        mapperRegistry.addMappers("com.source.mybatis.test.dao");
 
-        Map<String, String> sqlSession = new HashMap<>();
+        SqlSessionFactory sqlSessionFactory = new DefaultSqlSessionFactory(mapperRegistry);
+        SqlSession sqlSession = sqlSessionFactory.openSession();
 
-
-        IUserDao iUserDao = factory.newInstance(sqlSession);
-        iUserDao.queryNameById(1);
+        IUserDao iUserDao = sqlSession.getMapper(IUserDao.class);
+        System.out.println(iUserDao.queryNameById(123));
     }
 }

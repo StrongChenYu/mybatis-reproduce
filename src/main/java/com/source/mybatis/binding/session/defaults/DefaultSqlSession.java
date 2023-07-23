@@ -1,19 +1,20 @@
 package com.source.mybatis.binding.session.defaults;
 
-import com.source.mybatis.binding.binding.MapperRegistry;
+import com.source.mybatis.binding.mapping.MappedStatement;
+import com.source.mybatis.binding.session.Configuration;
 import com.source.mybatis.binding.session.SqlSession;
 
 public class DefaultSqlSession implements SqlSession {
 
-    private MapperRegistry mapperRegistry;
+    private Configuration configuration;
 
-    public DefaultSqlSession(MapperRegistry mapperRegistry) {
-        this.mapperRegistry = mapperRegistry;
+    public DefaultSqlSession(Configuration configuration) {
+        this.configuration = configuration;
     }
 
     @Override
-    public <T> T selectOne(String statement, String params) {
-        return (T) ("你被代理了！" + "方法：" + statement + " 入参：" + params);
+    public <T> T selectOne(String statementId, Object params) {
+        return (T) ("你被代理了！" + "方法：" + statementId + " 入参：" + params);
     }
 
     @Override
@@ -23,6 +24,11 @@ public class DefaultSqlSession implements SqlSession {
 
     @Override
     public <T> T getMapper(Class<T> type) {
-        return mapperRegistry.getMapper(type, this);
+        return configuration.getMapper(type, this);
+    }
+
+    @Override
+    public Configuration getConfiguration() {
+        return configuration;
     }
 }

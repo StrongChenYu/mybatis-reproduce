@@ -39,7 +39,12 @@ public class DefaultSqlSession implements SqlSession {
             ResultSet resultSet = preparedStatement.executeQuery();
 
             List<T> objList = resultSet2Obj(resultSet, Class.forName(boundSql.getResultType()));
-            return objList.get(0);
+
+            if (objList.size() > 0) {
+                return objList.get(0);
+            } else {
+                return null;
+            }
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
             return null;

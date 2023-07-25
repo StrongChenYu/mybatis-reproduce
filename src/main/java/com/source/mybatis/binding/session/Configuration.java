@@ -28,7 +28,6 @@ public class Configuration {
     public Configuration() {
         typeAliasRegistry.registerAlias("JDBC", JdbcTransactionFactory.class);
         typeAliasRegistry.registerAlias("DRUID", DruidDataSourceFactory.class);
-
     }
 
     public <T> void addMapper(Class<T> mapper) {
@@ -55,5 +54,15 @@ public class Configuration {
         return statementMap.get(id);
     }
 
+    public Environment getEnvironment() {
+        return environment;
+    }
 
+    public void setEnvironment(Environment environment) {
+        this.environment = environment;
+    }
+
+    public TypeAliasRegistry getTypeAliasRegistry() {
+        return typeAliasRegistry;
+    }
 }

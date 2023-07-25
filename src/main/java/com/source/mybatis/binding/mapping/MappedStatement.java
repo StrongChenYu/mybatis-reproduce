@@ -2,18 +2,14 @@ package com.source.mybatis.binding.mapping;
 
 import com.source.mybatis.binding.session.Configuration;
 
-import java.util.Map;
-
 public class MappedStatement {
 
+    // 配置项 相互依赖
     private Configuration configuration;
     private String id;
     private SqlCommandType sqlCommandType;
 
-    private String parameterType;
-    private String resultType;
-    private String sql;
-    private Map<Integer, String> parameter;
+    private BoundSql boundSql;
 
     // 只能通过建造者模式构造
     private MappedStatement() {}
@@ -21,14 +17,12 @@ public class MappedStatement {
     public static class Builder {
         private MappedStatement mappedStatement = new MappedStatement();
 
-        public Builder(Configuration configuration, String id, SqlCommandType sqlCommandType, String parameterType, String resultType, String sql, Map<Integer, String> parameter) {
+        public Builder(Configuration configuration, String id, SqlCommandType sqlCommandType, BoundSql bdSql) {
+            //  String parameterType, String resultType, String sql, Map<Integer, String> parameter
             mappedStatement.configuration = configuration;
             mappedStatement.id = id;
             mappedStatement.sqlCommandType = sqlCommandType;
-            mappedStatement.parameterType = parameterType;
-            mappedStatement.resultType = resultType;
-            mappedStatement.sql = sql;
-            mappedStatement.parameter = parameter;
+            mappedStatement.boundSql = bdSql;
         }
 
         // 建造者模式
@@ -50,19 +44,7 @@ public class MappedStatement {
         return sqlCommandType;
     }
 
-    public String getParameterType() {
-        return parameterType;
-    }
-
-    public String getResultType() {
-        return resultType;
-    }
-
-    public String getSql() {
-        return sql;
-    }
-
-    public Map<Integer, String> getParameter() {
-        return parameter;
+    public BoundSql getBoundSql() {
+        return boundSql;
     }
 }

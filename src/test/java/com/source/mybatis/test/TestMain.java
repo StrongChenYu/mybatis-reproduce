@@ -5,6 +5,7 @@ import com.source.mybatis.binding.session.SqlSession;
 import com.source.mybatis.binding.session.SqlSessionFactory;
 import com.source.mybatis.binding.session.SqlSessionFactoryBuilder;
 import com.source.mybatis.test.dao.IUserDao;
+import com.source.mybatis.test.po.User;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -20,7 +21,8 @@ public class TestMain {
 
         SqlSession sqlSession = sqlSessionFactory.openSession();
         IUserDao userDao = sqlSession.getMapper(IUserDao.class);
-        System.out.println(userDao.queryUserInfoById(123));
+        User user = userDao.queryUserInfoById(1);
+        System.out.println(user);
     }
 
 

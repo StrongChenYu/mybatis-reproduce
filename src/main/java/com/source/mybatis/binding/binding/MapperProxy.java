@@ -28,9 +28,7 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         MapperMethod mapperMethod = cachedMapperMethod(method);
-        Object execute = mapperMethod.execute(sqlSession, args);
-        System.out.println(execute);
-        return execute;
+        return mapperMethod.execute(sqlSession, args);
     }
 
     private MapperMethod cachedMapperMethod(Method method) {

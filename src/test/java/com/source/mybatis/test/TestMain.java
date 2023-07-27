@@ -1,5 +1,6 @@
 package com.source.mybatis.test;
 
+import com.source.mybatis.binding.datasource.unpooled.UnPooledDataSource;
 import com.source.mybatis.binding.io.Resources;
 import com.source.mybatis.binding.session.SqlSession;
 import com.source.mybatis.binding.session.SqlSessionFactory;
@@ -7,6 +8,7 @@ import com.source.mybatis.binding.session.SqlSessionFactoryBuilder;
 import com.source.mybatis.test.dao.IUserDao;
 import com.source.mybatis.test.po.User;
 import org.junit.Test;
+import sun.reflect.Reflection;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -36,5 +38,10 @@ public class TestMain {
 //
 //        IUserDao iUserDao = sqlSession.getMapper(IUserDao.class);
 //        System.out.println(iUserDao.queryNameById(123));
+    }
+
+    public static void main(String[] args) {
+        UnPooledDataSource pooledDataSource = new UnPooledDataSource();
+        System.out.println(Reflection.getCallerClass(1));
     }
 }

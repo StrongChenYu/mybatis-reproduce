@@ -11,23 +11,23 @@ import java.util.logging.Logger;
 
 public class UnPooledDataSource implements DataSource {
 
-    private Properties driverProperties;
+    protected Properties driverProperties;
 
-    private ClassLoader driverClassLoader;
+    protected ClassLoader driverClassLoader;
 
-    private static Map<String, Driver> registeredDrivers = new HashMap<>();
+    protected static Map<String, Driver> registeredDrivers = new HashMap<>();
 
-    private String driver;
+    protected String driver;
 
-    private String url;
+    protected String url;
 
-    private String username;
+    protected String username;
 
-    private String password;
+    protected String password;
 
-    private Boolean autoCommit;
+    protected Boolean autoCommit;
 
-    private Integer transactionIsolationLevel;
+    protected Integer transactionIsolationLevel;
 
     static {
         Enumeration<Driver> drivers = DriverManager.getDrivers();

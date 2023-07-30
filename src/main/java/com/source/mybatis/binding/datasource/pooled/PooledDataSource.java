@@ -20,7 +20,7 @@ public class PooledDataSource extends UnPooledDataSource implements DataSource {
     protected String poolPingQuery = "NO PING QUERY SET";
     protected int poolPingConnectionsNotUsedFor = 0;
     private int expectedConnectionTypeCode;
-    
+
 
     public void pushConnection(PooledConnection connection) throws SQLException {
         synchronized (poolState) {
@@ -33,6 +33,7 @@ public class PooledDataSource extends UnPooledDataSource implements DataSource {
             }
 
             if (poolState.idleConnections.size() < poolMaximumIdleConnections && connection.getConnectionTypeCode() == expectedConnectionTypeCode) {
+//            if (poolState.idleConnections.size() < poolMaximumIdleConnections) {
                 poolState.accumulatedCheckoutTime += connection.getCheckoutTime();
 
                 if (!connection.getRealConnection().getAutoCommit()) {
@@ -73,7 +74,7 @@ public class PooledDataSource extends UnPooledDataSource implements DataSource {
                     conn = poolState.idleConnections.remove(0);
                     logger.info("Check out connection " + conn.getRealHashCode() + " from pool.");
                 } else {
-                    if (poolState.idleConnections.size() < poolMaximumActiveConnections) {
+                    if (poolState.activeConnections.size() < poolMaximumActiveConnections) {
                         conn = new PooledConnection(super.getConnection(), this);
                         logger.info("Create connection " + conn.getRealHashCode() + ".");
                     } else {
@@ -154,7 +155,8 @@ public class PooledDataSource extends UnPooledDataSource implements DataSource {
 
     @Override
     public Connection getConnection() throws SQLException {
-        return super.getConnection();
+        expectedConnectionTypeCode = assembleConnectionTypeCode(url, username, password);
+        return popConnection().getProxyConnection();
     }
 
     @Override

@@ -157,4 +157,8 @@ public class PooledConnection implements InvocationHandler {
     public long getCheckoutTime() {
         return System.currentTimeMillis() - checkoutTimestamp;
     }
+
+    public long getTimeElapsedSinceLastUse() {
+        return System.currentTimeMillis() - lastUsedTimestamp;
+    }
 }

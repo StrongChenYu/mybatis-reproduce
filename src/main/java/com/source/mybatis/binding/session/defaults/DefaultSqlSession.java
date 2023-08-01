@@ -22,16 +22,18 @@ public class DefaultSqlSession implements SqlSession {
 
     @Override
     public <T> T selectOne(String statementId, Object params) {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
         try {
             MappedStatement mapperStatement = configuration.getMapperStatement(statementId);
             Environment environment = configuration.getEnvironment();
             DataSource dataSource = environment.getDataSource();
-            Connection connection = dataSource.getConnection();
 
+            connection = dataSource.getConnection();
             BoundSql boundSql = mapperStatement.getBoundSql();
             String sql = boundSql.getSql();
 
-            PreparedStatement preparedStatement = connection.prepareStatement(sql);
+            preparedStatement = connection.prepareStatement(sql);
 
             long param = Long.parseLong(((Object[]) params)[0].toString());
             preparedStatement.setLong(1, param);
@@ -48,6 +50,13 @@ public class DefaultSqlSession implements SqlSession {
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
             return null;
+        } finally {
+            try {
+                connection.close();
+                preparedStatement.close();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 

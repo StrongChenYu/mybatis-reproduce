@@ -4,8 +4,12 @@ import com.source.mybatis.binding.datasource.unpooled.UnPooledDataSource;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 public class PooledDataSource extends UnPooledDataSource implements DataSource {
 
@@ -19,9 +23,11 @@ public class PooledDataSource extends UnPooledDataSource implements DataSource {
     protected int poolTimeToWait = 20000;
     protected String poolPingQuery = "NO PING QUERY SET";
     protected int poolPingConnectionsNotUsedFor = 0;
+    protected boolean poolPingEnabled = false;
     private int expectedConnectionTypeCode;
 
-
+    // 感觉还是有问题 锁的粒度太粗了
+    // 10个链接一次批量归还的时候 只能触发一次notifyall
     public void pushConnection(PooledConnection connection) throws SQLException {
         synchronized (poolState) {
             poolState.activeConnections.remove(connection);
@@ -149,44 +155,136 @@ public class PooledDataSource extends UnPooledDataSource implements DataSource {
         return conn;
     }
 
+    public void forceCloseAll() {
+        synchronized (poolState) {
+            expectedConnectionTypeCode = assembleConnectionTypeCode(url, username, password);
+            for (int i = poolState.activeConnections.size() - 1; i >= 0; i--) {
+                try {
+                    PooledConnection pooledConnection = poolState.activeConnections.remove(i);
+                    pooledConnection.invalidate();
+
+                    Connection connection = pooledConnection.getRealConnection();
+                    if (!connection.getAutoCommit()) {
+                        connection.rollback();
+                    }
+
+                    connection.close();
+                } catch (Exception ignore) {
+                    // 不管
+                }
+            }
+            for (int i = poolState.idleConnections.size() - 1; i >= 0; i--) {
+                try {
+                    PooledConnection pooledConnection = poolState.idleConnections.remove(i);
+                    pooledConnection.invalidate();
+
+                    Connection connection = pooledConnection.getRealConnection();
+                    if (!connection.getAutoCommit()) {
+                        connection.rollback();
+                    }
+
+                    connection.close();
+                } catch (Exception ignore) {
+                    // 不管
+                }
+            }
+            logger.info("PooledDataSource forcefully closed/removed all connections.");
+        }
+    }
+
+    public boolean pingConnection(PooledConnection pooledConnection) {
+        boolean result;
+        try {
+            result = !pooledConnection.getRealConnection().isClosed();
+        } catch (SQLException e) {
+            logger.info("Connection " + pooledConnection.getRealHashCode() + " is BAD: " + e.getMessage());
+            result = false;
+        }
+
+        if (result) {
+            if (poolPingEnabled) {
+                if (poolPingConnectionsNotUsedFor >= 0 && pooledConnection.getTimeElapsedSinceLastUse() >= poolPingConnectionsNotUsedFor) {
+                    try {
+                        logger.info("Testing connection " + pooledConnection.getRealHashCode() + "...");
+                        Connection connection = pooledConnection.getRealConnection();
+                        Statement statement = connection.createStatement();
+                        ResultSet resultSet= statement.executeQuery(poolPingQuery);
+                        resultSet.close();
+
+                        if (!connection.getAutoCommit()) {
+                            connection.rollback();
+                        }
+                        result = true;
+                        logger.info("Connection " + pooledConnection.getRealHashCode() + " is GOOD!");
+                    } catch (Exception e) {
+                        logger.info("Execution of ping query '" + poolPingQuery + "' failed: " + e.getMessage());
+                        try {
+                            pooledConnection.getRealConnection().close();
+                        } catch (SQLException ignore) {
+                            result = false;
+                            logger.info("Connection " + pooledConnection.getRealHashCode() + " is BAD: " + e.getMessage());
+                        }
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    public static Connection unwrapConnection(Connection connection) {
+        if (Proxy.isProxyClass(connection.getClass())) {
+            InvocationHandler invocationHandler = Proxy.getInvocationHandler(connection);
+            if (invocationHandler instanceof PooledConnection) {
+                return ((PooledConnection) invocationHandler).getRealConnection();
+            }
+        }
+        return connection;
+    }
+
     private int assembleConnectionTypeCode(String url, String username, String password) {
         return (url + username + password).hashCode();
     }
 
     @Override
     public Connection getConnection() throws SQLException {
-        expectedConnectionTypeCode = assembleConnectionTypeCode(url, username, password);
         return popConnection().getProxyConnection();
     }
 
     @Override
     public void setDriver(String driver) {
         super.setDriver(driver);
+        forceCloseAll();
     }
 
     @Override
     public void setUrl(String url) {
         super.setUrl(url);
+        forceCloseAll();
     }
 
     @Override
     public void setUsername(String username) {
         super.setUsername(username);
+        forceCloseAll();
     }
 
     @Override
     public void setPassword(String password) {
         super.setPassword(password);
+        forceCloseAll();
     }
 
     @Override
     public void setAutoCommit(Boolean autoCommit) {
         super.setAutoCommit(autoCommit);
+        forceCloseAll();
     }
 
     @Override
     public void setTransactionIsolationLevel(Integer transactionIsolationLevel) {
         super.setTransactionIsolationLevel(transactionIsolationLevel);
+        forceCloseAll();
     }
+
 
 }

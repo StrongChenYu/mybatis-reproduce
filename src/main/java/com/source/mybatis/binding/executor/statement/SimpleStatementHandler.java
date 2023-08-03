@@ -30,6 +30,6 @@ public class SimpleStatementHandler extends BaseStatementHandler {
     public <E> List<E> query(Statement statement, ResultHandler resultHandler) throws SQLException {
         String sql = boundSql.getSql();
         statement.executeQuery(sql);
-        return resultSetHandler.handleResultSets(statement);
+        return resultSetHandler.<E>handleResultSets(statement);
     }
 }

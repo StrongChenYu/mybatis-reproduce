@@ -6,6 +6,7 @@ import com.source.mybatis.binding.datasource.pooled.PooledDataSourceFactory;
 import com.source.mybatis.binding.datasource.unpooled.UnPooledDataSourceFactory;
 import com.source.mybatis.binding.executor.Executor;
 import com.source.mybatis.binding.executor.SimpleExecutor;
+import com.source.mybatis.binding.executor.resultset.DefaultResultSetHandler;
 import com.source.mybatis.binding.executor.resultset.ResultSetHandler;
 import com.source.mybatis.binding.executor.statement.PreparedStatementHandler;
 import com.source.mybatis.binding.executor.statement.StatementHandler;
@@ -78,7 +79,7 @@ public class Configuration {
     }
 
     public ResultSetHandler newResultSetHandler(Executor executor, MappedStatement mappedStatement, BoundSql boundSql) {
-        return null;
+        return new DefaultResultSetHandler(executor, mappedStatement, boundSql);
     }
 
     public StatementHandler newStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameter, ResultHandler resultHandler, BoundSql boundSql) {

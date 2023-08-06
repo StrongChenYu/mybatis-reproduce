@@ -13,7 +13,7 @@ public class PropertyNamer {
         } else if (name.startsWith("set") || name.startsWith("get")) {
             name = name.substring(3);
         }
-
+        // 其实就是去掉get或者set后，把首字母小写了
         if (name.length() == 1 || (name.length() > 1 && !Character.isUpperCase(name.charAt(1)))) {
             name = name.substring(0, 1).toLowerCase(Locale.ENGLISH) + name.substring(1);
         }

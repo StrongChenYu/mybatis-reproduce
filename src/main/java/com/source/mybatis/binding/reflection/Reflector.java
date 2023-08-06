@@ -1,25 +1,22 @@
 package com.source.mybatis.binding.reflection;
 
+import com.source.mybatis.binding.reflection.invoker.GetInvoker;
 import com.source.mybatis.binding.reflection.invoker.Invoker;
 import com.source.mybatis.binding.reflection.invoker.MethodInvoker;
+import com.source.mybatis.binding.reflection.invoker.SetInvoker;
 import com.source.mybatis.binding.reflection.property.PropertyNamer;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.lang.reflect.ReflectPermission;
+import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Reflector {
 
     private static boolean classCacheEnabled = true;
-
     private static final String[] EMPTY_STRING_ARRAY = new String[0];
-
     private static final Map<Class<?>, Reflector> REFLECTOR_MAP = new ConcurrentHashMap<>();
 
     private Class<?> type;
-
     // get 属性列表
     private String[] readablePropertyNames = EMPTY_STRING_ARRAY;
     // set 属性列表
@@ -30,6 +27,7 @@ public class Reflector {
     private Map<String, Class<?>> setTypes = new HashMap<>();
     private Map<String, Class<?>> getTypes = new HashMap<>();
     private Constructor<?> defaultConstructor;
+
     private Map<String, String> caseInsensitivePropertyMap = new HashMap<>();
 
     public Reflector(Class<?> clazz) {
@@ -40,7 +38,19 @@ public class Reflector {
         addGetMethods(clazz);
         // 设置set方法
         addSetMethods(clazz);
-        System.out.println("main");
+        // 设置field相关的方法
+        addFields(clazz);
+        readablePropertyNames = getMethods.keySet().toArray(new String[0]);
+        writeablePropertyNames = getMethods.keySet().toArray(new String[0]);
+
+        // 大小写不一样会被覆盖掉
+        for (String readablePropertyName : readablePropertyNames) {
+            caseInsensitivePropertyMap.put(readablePropertyName.toUpperCase(Locale.ENGLISH), readablePropertyName);
+        }
+
+        for (String writeablePropertyName : writeablePropertyNames) {
+            caseInsensitivePropertyMap.put(writeablePropertyName.toUpperCase(Locale.ENGLISH), writeablePropertyName);
+        }
     }
 
     /**
@@ -103,6 +113,47 @@ public class Reflector {
         // 现在该去重了
         resolveSetterConflicts(conflictingSetters);
     }
+
+    private void addFields(Class<?> clazz) {
+        Field[] fields = clazz.getDeclaredFields();
+        for (Field field : fields) {
+            if (canAccessPrivateMethods()) {
+                try {
+                    field.setAccessible(true);
+                } catch (Exception e) {
+                }
+            }
+            if (field.isAccessible()) {
+                if (!setMethods.containsKey(field.getName())) {
+                    int modifiers = field.getModifiers();
+                    if (!(Modifier.isFinal(modifiers) && Modifier.isStatic(modifiers))) {
+                        addSetField(field);
+                    }
+                }
+                if (!getMethods.containsKey(field.getName())) {
+                    addGetField(field);
+                }
+            }
+        }
+        if (clazz.getSuperclass() != null) {
+            addFields(clazz.getSuperclass());
+        }
+    }
+
+    private void addGetField(Field field) {
+        if (isValidPropertyName(field.getName())) {
+            getMethods.put(field.getName(), new GetInvoker(field));
+            getTypes.put(field.getName(), field.getType());
+        }
+    }
+
+    private void addSetField(Field field) {
+        if (isValidPropertyName(field.getName())) {
+            setMethods.put(field.getName(), new SetInvoker(field));
+            setTypes.put(field.getName(), field.getType());
+        }
+    }
+
 
     /**
      * 这些东西都是为了处理特殊情况
@@ -292,6 +343,96 @@ public class Reflector {
             return false;
         }
         return true;
+    }
+
+    public Class<?> getType() {
+        return type;
+    }
+
+    public Constructor<?> getDefaultConstructor() {
+        if (defaultConstructor != null) {
+            return defaultConstructor;
+        } else {
+            throw new RuntimeException("There is no default constructor for " + type);
+        }
+    }
+
+    public boolean hasDefaultConstructor() {
+        return defaultConstructor != null;
+    }
+
+    public Class<?> getSetTypes(String name) {
+        Class<?> aClass = setTypes.get(name);
+        if (aClass == null) {
+            throw new RuntimeException("There is no setter for property named '" + name + "' in '" + type + "'");
+        }
+        return aClass;
+    }
+
+    public Invoker getGetInvoker(String propertyName) {
+        Invoker method = getMethods.get(propertyName);
+        if (method == null) {
+            throw new RuntimeException("There is no getter for property named '" + propertyName + "' in '" + type + "'");
+        }
+        return method;
+    }
+
+    public Invoker getSetInvoker(String propertyName) {
+        Invoker method = setMethods.get(propertyName);
+        if (method == null) {
+            throw new RuntimeException("There is no setter for property named '" + propertyName + "' in '" + type + "'");
+        }
+        return method;
+    }
+
+    public Class<?> getGetterType(String propertyName) {
+        Class<?> clazz = getTypes.get(propertyName);
+        if (clazz == null) {
+            throw new RuntimeException("There is no getter for property named '" + propertyName + "' in '" + type + "'");
+        }
+        return clazz;
+    }
+
+    public String[] getReadablePropertyNames() {
+        return readablePropertyNames;
+    }
+
+    public String[] getWriteablePropertyNames() {
+        return writeablePropertyNames;
+    }
+
+    public boolean hasSetter(String name) {
+        return setMethods.containsKey(name);
+    }
+
+
+    public boolean hasGetter(String name) {
+        return getMethods.containsKey(name);
+    }
+
+    public String findPropertyName(String name) {
+        return caseInsensitivePropertyMap.get(name.toUpperCase(Locale.ENGLISH));
+    }
+
+    public static Reflector forClass(Class<?> clazz) {
+        if (classCacheEnabled) {
+            Reflector reflector = REFLECTOR_MAP.get(clazz);
+            if (reflector == null) {
+                Reflector r = new Reflector(clazz);
+                REFLECTOR_MAP.put(clazz, r);
+            }
+            return  reflector;
+        } else {
+            return new Reflector(clazz);
+        }
+    }
+
+    public static void setClassCacheEnabled(boolean classCacheEnabled) {
+        Reflector.classCacheEnabled = classCacheEnabled;
+    }
+
+    public static boolean isClassCacheEnabled() {
+        return classCacheEnabled;
     }
 
     public static void main(String[] args) throws NoSuchMethodException {

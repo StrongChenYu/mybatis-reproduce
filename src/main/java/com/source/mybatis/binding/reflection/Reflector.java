@@ -1,9 +1,9 @@
 package com.source.mybatis.binding.reflection;
 
-import com.source.mybatis.binding.reflection.invoker.GetInvoker;
+import com.source.mybatis.binding.reflection.invoker.GetFieldInvoker;
 import com.source.mybatis.binding.reflection.invoker.Invoker;
 import com.source.mybatis.binding.reflection.invoker.MethodInvoker;
-import com.source.mybatis.binding.reflection.invoker.SetInvoker;
+import com.source.mybatis.binding.reflection.invoker.SetFieldInvoker;
 import com.source.mybatis.binding.reflection.property.PropertyNamer;
 
 import java.lang.reflect.*;
@@ -142,14 +142,14 @@ public class Reflector {
 
     private void addGetField(Field field) {
         if (isValidPropertyName(field.getName())) {
-            getMethods.put(field.getName(), new GetInvoker(field));
+            getMethods.put(field.getName(), new GetFieldInvoker(field));
             getTypes.put(field.getName(), field.getType());
         }
     }
 
     private void addSetField(Field field) {
         if (isValidPropertyName(field.getName())) {
-            setMethods.put(field.getName(), new SetInvoker(field));
+            setMethods.put(field.getName(), new SetFieldInvoker(field));
             setTypes.put(field.getName(), field.getType());
         }
     }
@@ -393,11 +393,19 @@ public class Reflector {
         return clazz;
     }
 
-    public String[] getReadablePropertyNames() {
+    public Class<?> getSetterType(String propertyName) {
+        Class<?> clazz = setTypes.get(propertyName);
+        if (clazz == null) {
+            throw new RuntimeException("There is no setter for property named '" + propertyName + "' in '" + type + "'");
+        }
+        return clazz;
+    }
+
+    public String[] getGetablePropertyNames() {
         return readablePropertyNames;
     }
 
-    public String[] getWriteablePropertyNames() {
+    public String[] getSetablePropertyNames() {
         return writeablePropertyNames;
     }
 
@@ -418,8 +426,8 @@ public class Reflector {
         if (classCacheEnabled) {
             Reflector reflector = REFLECTOR_MAP.get(clazz);
             if (reflector == null) {
-                Reflector r = new Reflector(clazz);
-                REFLECTOR_MAP.put(clazz, r);
+                reflector = new Reflector(clazz);
+                REFLECTOR_MAP.put(clazz, reflector);
             }
             return  reflector;
         } else {

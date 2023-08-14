@@ -5,11 +5,11 @@ import java.lang.reflect.Field;
 /**
  * 对field设置属性
  */
-public class GetInvoker implements Invoker {
+public class GetFieldInvoker implements Invoker {
 
     private Field field;
 
-    public GetInvoker(Field field) {
+    public GetFieldInvoker(Field field) {
         this.field = field;
     }
 

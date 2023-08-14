@@ -2,11 +2,11 @@ package com.source.mybatis.binding.reflection.invoker;
 
 import java.lang.reflect.Field;
 
-public class SetInvoker implements Invoker {
+public class SetFieldInvoker implements Invoker {
 
     private Field field;
 
-    public SetInvoker(Field field) {
+    public SetFieldInvoker(Field field) {
         this.field = field;
     }
 
